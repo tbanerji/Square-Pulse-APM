@@ -36,6 +36,23 @@ with col1:
     user_input = st.text_area("Paste customer reviews:", height=300, 
                              placeholder="Example: The POS is fast but the reporting is confusing...")
     analyze_btn = st.button("Generate Dashboard")
+    # Create a 'Demo' button next to the 'Generate' button
+col_a, col_b = st.columns(2)
+with col_a:
+    analyze_btn = st.button("Generate Dashboard")
+with col_b:
+    demo_btn = st.button("🚀 Run Demo (No API Key Needed)")
+
+# If they click the demo button, we use hardcoded data
+if demo_btn:
+    json_data = {
+        "sentiment_score": 85,
+        "sentiment_history": [70, 75, 80, 82, 85],
+        "top_keywords": {"Fast": 10, "Reliable": 8, "Easy": 15},
+        "feature_recommendation": "Implement an 'AI-Morning Summary' for sellers to see top customer issues before they open.",
+        "summary": "Overall sentiment is high, specifically regarding the new Afterpay integration."
+    }
+    # Then trigger the visualization code below...
 
 if analyze_btn and api_key:
     with st.spinner("Analyzing high-dimensional feedback..."):
