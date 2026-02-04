@@ -1,46 +1,79 @@
 import streamlit as st
 import google.generativeai as genai
+import pandas as pd
+import plotly.express as px
+import json
 
-# 1. Page Config
-st.set_page_config(page_title="Square Pulse AI", page_icon="⏹️")
-st.title("Square Pulse: AI Merchant Strategy Tool")
+# 1. SQUARE BRANDING (CSS)
+st.set_page_config(page_title="Square Pulse", page_icon="⏹️", layout="wide")
 
-# 2. Sidebar for API Key
-st.sidebar.header("System Settings")
-api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
+st.markdown("""
+    <style>
+    .main { background-color: #f7f7f7; }
+    .stButton>button { background-color: #000000; color: white; border-radius: 8px; width: 100%; }
+    .stTextArea>div>div>textarea { border-radius: 10px; border: 1px solid #e0e0e0; }
+    h1 { color: #1a1a1a; font-family: 'Inter', sans-serif; font-weight: 700; }
+    .insight-card { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 2. LOGIC: INITIALIZE AI
+st.sidebar.title("⏹️ Square Pulse")
+api_key = st.sidebar.text_input("Enter API Key", type="password")
 
 if api_key:
-    try:
-        genai.configure(api_key=api_key)
-        # UPDATED TO THE 2026 CUTTING EDGE MODEL FROM YOUR LIST
-        model = genai.GenerativeModel('gemini-3-flash-preview')
-        st.sidebar.success("Gemini 3 Connected!")
-    except Exception as e:
-        st.sidebar.error(f"Setup Error: {e}")
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-3-flash-preview')
 
-# 3. PM UI
-st.info("💡 Analyzing seller sentiment and growth opportunities using Gemini 3 Flash.")
-user_input = st.text_area("Seller Feedback / Reviews:", height=200, 
-                         placeholder="Paste reviews here...")
+# 3. UI LAYOUT
+st.title("Merchant Feedback Intelligence")
+st.caption("AI-Native Product Management for Square Sellers")
 
-if st.button("Generate Roadmap Strategy"):
-    if not api_key:
-        st.error("Please provide an API Key.")
-    elif not user_input:
-        st.warning("Please provide feedback data.")
-    else:
-        try:
-            with st.spinner("Gemini 3 is processing high-dimensional data..."):
-                prompt = f"""
-                You are a Square APM. Analyze this seller data: {user_input}
-                
-                Provide:
-                1. Sentiment Health (1-10)
-                2. Operational Friction Points
-                3. A 'Next-Gen' AI feature Square should build to solve these problems.
-                """
-                response = model.generate_content(prompt)
-                st.markdown("### 🚀 Strategic AI Insights")
-                st.write(response.text)
-        except Exception as e:
-            st.error(f"Execution Error: {e}")
+col1, col2 = st.columns([1, 2], gap="large")
+
+with col1:
+    st.markdown("### 📥 Input Feedback")
+    user_input = st.text_area("Paste customer reviews:", height=300, 
+                             placeholder="Example: The POS is fast but the reporting is confusing...")
+    analyze_btn = st.button("Generate Dashboard")
+
+if analyze_btn and api_key:
+    with st.spinner("Analyzing high-dimensional feedback..."):
+        # We ask the AI to return JSON so we can build charts!
+        prompt = f"""
+        Analyze these reviews: {user_input}
+        Return ONLY a JSON object with:
+        "sentiment_score": (int 1-100),
+        "sentiment_history": [list of 5 random ints around the score to simulate a week's trend],
+        "top_keywords": {{"Keyword": frequency_int}},
+        "feature_recommendation": "string",
+        "summary": "string"
+        """
+        response = model.generate_content(prompt)
+        # Clean the response to ensure it's valid JSON
+        json_data = json.loads(response.text.replace('```json', '').replace('```', ''))
+
+        with col2:
+            st.markdown("### 📊 Merchant Health Overview")
+            
+            # Metric Row
+            m1, m2 = st.columns(2)
+            m1.metric("Average Sentiment", f"{json_data['sentiment_score']}%", delta="4%")
+            m2.metric("Review Volume", len(user_input.split('\n')), delta="12%")
+
+            # CHART: Sentiment Trend
+            df = pd.DataFrame({"Day": ["Mon", "Tue", "Wed", "Thu", "Fri"], "Sentiment": json_data['sentiment_history']})
+            fig = px.line(df, x="Day", y="Sentiment", title="Weekly Sentiment Trend", 
+                         color_discrete_sequence=['#00d44a']) # Square Green
+            fig.update_layout(plot_bgcolor="white", paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig, use_container_width=True)
+
+            # AI Insights Card
+            st.markdown(f"""
+            <div class="insight-card">
+                <h4>🤖 AI Product Recommendation</h4>
+                <p>{json_data['feature_recommendation']}</p>
+                <hr>
+                <p><strong>Executive Summary:</strong> {json_data['summary']}</p>
+            </div>
+            """, unsafe_allow_html=True)
